@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ipotatotimer/services/database_services.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -10,6 +11,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  Map<String, dynamic> model = <String, dynamic>{};
   Duration duration = const Duration(hours: 1, minutes: 23, seconds: 5);
 
   @override
@@ -20,6 +22,26 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         title: const Text('Potato Timer'),
       ),
+      body: FutureBuilder<dynamic>(
+          future: DatabaseServices.instance.tasks(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+            if (snapshot.data.length == 0) {
+              return const Text("No data");
+            }
+            return ListView.builder(
+              itemCount: 1,
+              itemBuilder: (BuildContext context, int index) {
+                return ListTile(
+                  title: Text(snapshot.data?[index]?['title'] ?? 'No Data'),
+                );
+              },
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
         onPressed: () => showDialog(
@@ -37,7 +59,11 @@ class _HomeState extends State<Home> {
                         labelText: 'Title',
                         hintText: 'Title',
                       ),
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        setState(() {
+                          model['title'] = value;
+                        });
+                      },
                     ),
                     const SizedBox(
                       height: 32.0,
@@ -51,7 +77,9 @@ class _HomeState extends State<Home> {
                         labelText: 'Description',
                         hintText: 'e.g. john@gmail.com',
                       ),
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        model['description'] = value;
+                      },
                     ),
                     const SizedBox(
                       height: 32.0,
@@ -86,7 +114,10 @@ class _HomeState extends State<Home> {
                                   setChildState(() {
                                     duration = newDuration!;
                                   });
-                                  setState(() => duration = newDuration!);
+                                  setState(() {
+                                    duration = newDuration!;
+                                    model['duration'] = newDuration.toString();
+                                  });
                                 },
                               ),
                               const SizedBox(
@@ -171,7 +202,12 @@ class _HomeState extends State<Home> {
                 ),
               ),
               actions: [
-                FilledButton(onPressed: () {}, child: const Text('Add Task'))
+                FilledButton(
+                  onPressed: () {
+                    DatabaseServices.instance.addTask(model);
+                  },
+                  child: const Text('Add Task'),
+                )
               ],
             ),
           ),
