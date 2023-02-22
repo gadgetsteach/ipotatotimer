@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,57 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   Map<String, dynamic> model = <String, dynamic>{};
   Duration duration = const Duration(hours: 1, minutes: 23, seconds: 5);
+  AudioPlayer audioPlayer = AudioPlayer();
+
+  String filePath = 'audio/dhoom.mp3';
+  PlayerState playerState = PlayerState.paused;
+  int count = 5;
+  Timer? timer;
+  countDown(int count) {
+    timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        if (count > 0) {
+          setState(() {
+            count--;
+          });
+          if (kDebugMode) {
+            print(count);
+          }
+        }
+      },
+    );
+  }
+
+// listen state chnages
+  @override
+  void initState() {
+    audioPlayer.onPlayerStateChanged.listen((PlayerState s) {
+      setState(() {
+        playerState = s;
+      });
+    });
+
+    super.initState();
+  }
+
+// dispose
+  @override
+  void dispose() {
+    audioPlayer.release();
+    audioPlayer.dispose();
+    super.dispose();
+  }
+
+// play music
+  playMusic() async {
+    await audioPlayer.play(AssetSource(filePath));
+  }
+
+  // Compulsory
+  pauseMusic() async {
+    await audioPlayer.pause();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +87,62 @@ class _HomeState extends State<Home> {
               return const Text("No data");
             }
             return ListView.builder(
-              itemCount: 1,
+              itemCount: snapshot.data.length,
               itemBuilder: (BuildContext context, int index) {
-                return ListTile(
-                  title: Text(snapshot.data?[index]?['title'] ?? 'No Data'),
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              snapshot.data?[index]?['duration']
+                                      .substring(0, 10) ??
+                                  '',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.apply(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                playerState == PlayerState.playing
+                                    ? pauseMusic()
+                                    : playMusic();
+                              },
+                              icon: Icon(playerState == PlayerState.playing
+                                  ? Icons.pause
+                                  : Icons.play_arrow),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                pauseMusic();
+                              },
+                              icon: const Icon(Icons.stop),
+                            ),
+                          ],
+                        ),
+                        ListTile(
+                          title: Text(
+                            snapshot.data?[index]?['title'] ?? '',
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .appBarTheme
+                                    .backgroundColor),
+                          ),
+                          subtitle:
+                              Text(snapshot.data?[index]?['description'] ?? ''),
+                        )
+                      ],
+                    ),
+                  ),
                 );
               },
             );
@@ -205,6 +310,7 @@ class _HomeState extends State<Home> {
                 FilledButton(
                   onPressed: () {
                     DatabaseServices.instance.addTask(model);
+                    Navigator.pop(context);
                   },
                   child: const Text('Add Task'),
                 )

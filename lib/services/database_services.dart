@@ -1,8 +1,8 @@
-// import 'package:path/path.dart';
-
+import 'dart:io';
+import 'dart:math';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
-// import 'package:uuid/uuid.dart';
 
 class DatabaseServices {
   DatabaseServices._();
@@ -10,41 +10,31 @@ class DatabaseServices {
 
   static Database? _database;
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
+  Future<Database?> get database async {
+    if (_database != null) return _database;
     _database = await initDB();
-    return _database!;
+    return _database;
   }
 
-  initDB() async {
-    var databasesPath = await getDatabasesPath();
-    String path = join(databasesPath, 'ipotatotimer');
-    return await openDatabase(path, version: 1, onOpen: (db) {},
+  Future initDB() async {
+    Directory directory = await getApplicationDocumentsDirectory();
+    String path = join(directory.path, 'ipotatotimer.db');
+    return await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
-      await db.execute(
-          'CREATE TABLE tasks (id INTEGER PRIMARY KEY UNIQUE, title TEXT, description TEXT, duration TEXT)');
+      db.execute(
+          'CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT, description TEXT, duration TEXT)');
     });
   }
 
   addTask(Map<String, dynamic> model) async {
-    // var uuid = const Uuid();
     final db = await database;
-    model['id'] = 21313;
-
-    var raw = await db.rawInsert(
-        "INSERT Into tasks(id,title,description,duration)"
-        "VALUES(${model['id']}, ${model['title']}, ${model['description']}, 'hey'})",
-        [model['id'], model['title'], model['description'], 'hey']);
-    return raw;
-    // db.insert('tasks', model).then((value) {
-    //   if (kDebugMode) {
-    //     print(value);
-    //   }
-    // });
+    model['id'] = Random().nextInt(900000) + 100000;
+    var res = await db?.insert('tasks', model);
+    return res;
   }
 
   tasks() async {
     final db = await database;
-    return db.rawQuery('SELECT * FROM tasks');
+    return await db?.query('tasks');
   }
 }
