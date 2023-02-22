@@ -15,26 +15,48 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   Map<String, dynamic> model = <String, dynamic>{};
   Duration duration = const Duration(hours: 1, minutes: 23, seconds: 5);
+  DateTime startTime = DateTime(0, 02, 25);
+  Duration remaining = DateTime.now().difference(DateTime(1, 09, 59));
+  Timer? t;
+  int hrs = 0, mins = 0, sec = 0;
   AudioPlayer audioPlayer = AudioPlayer();
-
   String filePath = 'audio/dhoom.mp3';
   PlayerState playerState = PlayerState.paused;
-  int count = 5;
-  Timer? timer;
-  countDown(int count) {
-    timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (count > 0) {
-          setState(() {
-            count--;
-          });
-          if (kDebugMode) {
-            print(count);
+  List<dynamic> isActive = List.filled(100, false);
+
+  startTimer(DateTime eventTime, int index) async {
+    setState(() {
+      isActive[index] = true;
+    });
+    int timeDiff = eventTime.difference(DateTime.now()).inSeconds;
+
+    t = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (timeDiff > 0) {
+          if (isActive[index]) {
+            if (eventTime != DateTime.now()) {
+              timeDiff = timeDiff - 1;
+            } else {
+              pauseMusic();
+              isActive[index] = false;
+            }
           }
+        } else {
+          playMusic();
+          isActive[index] = false;
         }
-      },
-    );
+        hrs = timeDiff ~/ (60 * 60) % 24;
+        mins = (timeDiff ~/ 60) % 60;
+        sec = timeDiff % 60;
+      });
+    });
+  }
+
+  void cancel(int index) {
+    t?.cancel();
+    setState(() {
+      isActive[index] = false;
+    });
   }
 
 // listen state chnages
@@ -64,7 +86,7 @@ class _HomeState extends State<Home> {
 
   // Compulsory
   pauseMusic() async {
-    await audioPlayer.pause();
+    await audioPlayer.stop();
   }
 
   @override
@@ -100,9 +122,12 @@ class _HomeState extends State<Home> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Text(
-                              snapshot.data?[index]?['duration']
-                                      .substring(0, 10) ??
-                                  '',
+                              // ignore: unrelated_type_equality_checks
+                              isActive[index]
+                                  ? "$hrs:$mins:$sec"
+                                  : (snapshot.data?[index]?['duration']
+                                          .substring(0, 7) ??
+                                      ''),
                               style: Theme.of(context)
                                   .textTheme
                                   .headlineMedium
@@ -113,16 +138,28 @@ class _HomeState extends State<Home> {
                             ),
                             IconButton(
                               onPressed: () async {
-                                playerState == PlayerState.playing
-                                    ? pauseMusic()
-                                    : playMusic();
+                                Duration eventTime = Duration(
+                                    hours: int.parse(
+                                        "${snapshot.data?[index]?['duration'].substring(0, 1)}"),
+                                    minutes: int.parse(
+                                        "${snapshot.data?[index]?['duration'].substring(2, 4)}"),
+                                    seconds: int.parse(
+                                        "${snapshot.data?[index]?['duration'].substring(5, 7)}"));
+                                if (kDebugMode) {
+                                  print(eventTime);
+                                }
+                                isActive[index]
+                                    ? cancel(index)
+                                    : startTimer(
+                                        DateTime.now().add(eventTime), index);
                               },
-                              icon: Icon(playerState == PlayerState.playing
+                              icon: Icon(isActive[index]
                                   ? Icons.pause
                                   : Icons.play_arrow),
                             ),
                             IconButton(
                               onPressed: () {
+                                cancel(index);
                                 pauseMusic();
                               },
                               icon: const Icon(Icons.stop),
@@ -131,7 +168,7 @@ class _HomeState extends State<Home> {
                         ),
                         ListTile(
                           title: Text(
-                            snapshot.data?[index]?['title'] ?? '',
+                            "${snapshot.data?[index]?['title'] ?? ''}",
                             style: TextStyle(
                                 color: Theme.of(context)
                                     .appBarTheme
