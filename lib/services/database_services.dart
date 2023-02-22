@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -29,8 +30,22 @@ class DatabaseServices {
   addTask(Map<String, dynamic> model) async {
     final db = await database;
     model['id'] = Random().nextInt(900000) + 100000;
-    var res = await db?.insert('tasks', model);
-    return res;
+    return await db?.insert('tasks', model);
+  }
+
+  updateTask(Map<String, dynamic> model) async {
+    final db = await database;
+    if (kDebugMode) {
+      print(model);
+    }
+    final id = model['id'];
+    return await db?.update('tasks', model, where: "id = ?", whereArgs: [id]);
+  }
+
+  deleteTask(int id) async {
+    final db = await database;
+
+    return await db?.delete('tasks', where: "id = ?", whereArgs: [id]);
   }
 
   tasks() async {

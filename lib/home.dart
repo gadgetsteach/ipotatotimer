@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ipotatotimer/services/database_services.dart';
+import 'package:intl/intl.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -24,7 +25,7 @@ class _HomeState extends State<Home> {
   PlayerState playerState = PlayerState.paused;
   List<dynamic> isActive = List.filled(100, false);
 
-  startTimer(DateTime eventTime, int index) async {
+  startTimer(DateTime eventTime, int index, Map<String, dynamic> model) async {
     setState(() {
       isActive[index] = true;
     });
@@ -42,6 +43,18 @@ class _HomeState extends State<Home> {
             }
           }
         } else {
+          DatabaseServices.instance.updateTask({
+            'id': model['id'],
+            'title': model['title'],
+            'description': model['description'],
+            'duration': model['duration']
+          });
+          DatabaseServices.instance.updateTask({
+            'id': model['id'],
+            'title': model['title'],
+            'description': model['description'],
+            'duration': 'done'
+          });
           playMusic();
           isActive[index] = false;
         }
@@ -110,78 +123,128 @@ class _HomeState extends State<Home> {
             }
             return ListView.builder(
               itemCount: snapshot.data.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              // ignore: unrelated_type_equality_checks
-                              isActive[index]
-                                  ? "$hrs:$mins:$sec"
-                                  : (snapshot.data?[index]?['duration']
-                                          .substring(0, 7) ??
-                                      ''),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.apply(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
+              itemBuilder: (BuildContext context, int index) => Stack(
+                children: [
+                  Card(
+                    margin: const EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
+                      top: 8.0,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          snapshot.data?[index]?['duration'] == 'done'
+                              ? ListTile(
+                                  iconColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  leading: const Icon(Icons.graphic_eq),
+                                  title: Text(
+                                    'FINISHED',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.apply(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                        ),
+                                  ),
+                                  trailing: const Icon(Icons.graphic_eq),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      // ignore: unrelated_type_equality_checks
+                                      isActive[index]
+                                          ? "$hrs:$mins:$sec"
+                                          : (snapshot.data?[index]?['duration']
+                                                  .substring(0, 7) ??
+                                              ''),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.apply(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                    ),
+                                    IconButton(
+                                      onPressed: () async {
+                                        Duration eventTime = Duration(
+                                            hours: int.parse(
+                                                "${snapshot.data?[index]?['duration'].substring(0, 1)}"),
+                                            minutes: int.parse(
+                                                "${snapshot.data?[index]?['duration'].substring(2, 4)}"),
+                                            seconds: int.parse(
+                                                "${snapshot.data?[index]?['duration'].substring(5, 7)}"));
+                                        if (kDebugMode) {
+                                          print(eventTime);
+                                        }
+                                        isActive[index]
+                                            ? cancel(index)
+                                            : startTimer(
+                                                DateTime.now().add(eventTime),
+                                                index,
+                                                snapshot.data[index]);
+                                      },
+                                      icon: Icon(isActive[index]
+                                          ? Icons.pause
+                                          : Icons.play_arrow),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        cancel(index);
+                                        pauseMusic();
+                                      },
+                                      icon: const Icon(Icons.stop),
+                                    ),
+                                  ],
+                                ),
+                          ListTile(
+                            title: Text(
+                              toBeginningOfSentenceCase(
+                                  "${snapshot.data?[index]?['title'] ?? ''}")!,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .appBarTheme
+                                      .backgroundColor),
                             ),
-                            IconButton(
-                              onPressed: () async {
-                                Duration eventTime = Duration(
-                                    hours: int.parse(
-                                        "${snapshot.data?[index]?['duration'].substring(0, 1)}"),
-                                    minutes: int.parse(
-                                        "${snapshot.data?[index]?['duration'].substring(2, 4)}"),
-                                    seconds: int.parse(
-                                        "${snapshot.data?[index]?['duration'].substring(5, 7)}"));
-                                if (kDebugMode) {
-                                  print(eventTime);
-                                }
-                                isActive[index]
-                                    ? cancel(index)
-                                    : startTimer(
-                                        DateTime.now().add(eventTime), index);
-                              },
-                              icon: Icon(isActive[index]
-                                  ? Icons.pause
-                                  : Icons.play_arrow),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                cancel(index);
-                                pauseMusic();
-                              },
-                              icon: const Icon(Icons.stop),
-                            ),
-                          ],
-                        ),
-                        ListTile(
-                          title: Text(
-                            "${snapshot.data?[index]?['title'] ?? ''}",
-                            style: TextStyle(
-                                color: Theme.of(context)
-                                    .appBarTheme
-                                    .backgroundColor),
+                            subtitle: Text(
+                                snapshot.data?[index]?['description'] ?? ''),
                           ),
-                          subtitle:
-                              Text(snapshot.data?[index]?['description'] ?? ''),
-                        )
-                      ],
+                          const SizedBox(
+                            height: 32.0,
+                          )
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
+                  Positioned(
+                      bottom: -4,
+                      width: MediaQuery.of(context).size.width * 1,
+                      child: snapshot.data?[index]?['duration'] == 'done'
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: FilledButton(
+                                onPressed: () {
+                                  setState(() {
+                                    cancel(index);
+                                    pauseMusic();
+                                    DatabaseServices.instance
+                                        .deleteTask(snapshot.data[index]['id']);
+                                  });
+                                },
+                                child: const Text('MARK COMPLETE'),
+                              ),
+                            )
+                          : const SizedBox.shrink())
+                ],
+              ),
             );
           }),
       floatingActionButton: FloatingActionButton(
@@ -346,7 +409,10 @@ class _HomeState extends State<Home> {
               actions: [
                 FilledButton(
                   onPressed: () {
-                    DatabaseServices.instance.addTask(model);
+                    setState(() {
+                      DatabaseServices.instance.addTask(model);
+                    });
+
                     Navigator.pop(context);
                   },
                   child: const Text('Add Task'),
