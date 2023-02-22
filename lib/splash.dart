@@ -14,8 +14,8 @@ class _SplashState extends State<Splash> {
   @override
   void initState() {
     Future.delayed(const Duration(milliseconds: 5000), () {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => const Home()));
+      // Navigator.pushReplacement(
+      //     context, MaterialPageRoute(builder: (context) => const Home()));
     });
 
     super.initState();
@@ -36,7 +36,7 @@ class _SplashState extends State<Splash> {
               "iPotato Timer",
               style: TextStyle(shadows: <Shadow>[
                 Shadow(
-                    offset: const Offset(-2.0, -0.0),
+                    offset: const Offset(-3.0, -0.0),
                     blurRadius: 3.0,
                     color: Theme.of(context).primaryColor),
               ], fontSize: 48.0),

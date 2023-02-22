@@ -1,4 +1,4 @@
-package com.example.ipotatotimer
+package com.ipotatotimer.app
 
 import io.flutter.embedding.android.FlutterActivity
 
